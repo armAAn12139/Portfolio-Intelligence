@@ -1,12 +1,12 @@
-# 📈 FinPlot - Portfolio Intelligence
+# FinPlot - Portfolio Intelligence
 
-*Your Smart Portfolio Companion* 💡
+*Your Smart Portfolio Companion* 
 
 A comprehensive portfolio analysis tool that provides intelligent insights, risk assessment, and optimization recommendations for investors. Built with Python and featuring an interactive Streamlit web interface.
 
-## ✨ Features
+##  Features
 
-### 🎯 Core Analytics
+### Core Analytics
 - **Portfolio Volatility** - Measure market risk using historical data
 - **Risk Scoring** - Intelligent risk assessment (0-100 scale)
 - **Diversification Analysis** - Evaluate asset allocation balance
@@ -19,14 +19,14 @@ A comprehensive portfolio analysis tool that provides intelligent insights, risk
 - **Risk Warnings** - Alerts for high-risk positions
 - **Optimization Suggestions** - Optimal portfolio rebalancing
 
-### 🎨 Interactive Interface
+###  Interactive Interface
 - **Tabbed Dashboard** - Organized analysis sections
 - **Interactive Charts** - Plotly-powered visualizations
 - **What-If Scenarios** - Test allocation changes
 - **Risk Gauge** - Visual risk meter
 - **Real-time Updates** - Live market data integration
 
-## 🚀 Quick Start
+##  Quick Start
 
 ### Prerequisites
 - Python 3.8+
@@ -58,12 +58,12 @@ A comprehensive portfolio analysis tool that provides intelligent insights, risk
 
 5. **Open your browser** to `http://localhost:8501`
 
-## 📖 Usage
+##  Usage
 
 ### Web Interface (Recommended)
 1. Launch the Streamlit app
 2. Enter your portfolio assets in the sidebar
-3. Click "🚀 Analyze Portfolio"
+3. Click " Analyze Portfolio"
 4. Explore the interactive dashboard:
    - **Overview**: Key metrics and risk gauge
    - **Analysis**: Detailed charts and allocations
@@ -82,7 +82,7 @@ python main.py
 - **Current Value**: Your current holding value
 - **Purchase Price**: Original investment amount
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 finplot/
@@ -108,7 +108,7 @@ finplot/
     └── helpers.py       # Output formatting
 ```
 
-## 📊 Sample Output
+##  Sample Output
 
 ```
 ------ Portfolio Intelligence Report ------
@@ -126,7 +126,7 @@ AI Insights:
 - High crypto exposure - monitor closely for volatility
 ```
 
-## 🔧 Configuration
+##  Configuration
 
 ### Environment Variables
 - No environment variables required for basic usage
@@ -164,6 +164,6 @@ black .
 - **SciPy** - Optimization algorithms
 
 
-**Made with ❤️ by the FinPlot Team**
+**Made with  by the FinPlot Team that includes just me😎**
 
-*Invest smart, analyze better!* 🚀
+*Invest smart, analyze better!*
