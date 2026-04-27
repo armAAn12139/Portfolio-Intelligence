@@ -107,20 +107,59 @@ if st.sidebar.button("🚀 Analyze Portfolio", type="primary"):
             new_weight = st.slider(f"New weight for {selected_asset}", 0.0, 100.0, float(current_weight), 1.0)
 
             if st.button("Recalculate"):
-                # Simple recalculation (not full re-analysis)
-                adjusted_allocation = result['allocation'].copy()
-                adjusted_allocation[selected_asset] = new_weight
-                # Normalize others (simplified)
-                total_other = 100 - new_weight
-                other_assets = [k for k in adjusted_allocation.keys() if k != selected_asset]
-                if other_assets:
-                    for asset in other_assets:
-                        adjusted_allocation[asset] = adjusted_allocation[asset] * (total_other / sum(adjusted_allocation[a] for a in other_assets))
-                
-                st.subheader("Adjusted Allocation")
-                adj_df = pd.DataFrame.from_dict(adjusted_allocation, orient='index', columns=['Percentage'])
-                fig = px.pie(adj_df, values='Percentage', names=adj_df.index, title="What-If Allocation")
-                st.plotly_chart(fig, use_container_width=True)
+                try:
+                    # Create adjusted allocation
+                    adjusted_allocation = result['allocation'].copy()
+                    adjusted_allocation[selected_asset] = new_weight
+                    
+                    # Calculate remaining percentage for other assets
+                    total_other = 100.0 - new_weight
+                    
+                    # Get other assets
+                    other_assets = [k for k in adjusted_allocation.keys() if k != selected_asset]
+                    
+                    if other_assets and total_other > 0:
+                        # Calculate current total of other assets
+                        current_other_total = sum(adjusted_allocation[a] for a in other_assets)
+                        
+                        if current_other_total > 0:
+                            # Scale other assets proportionally to fill remaining space
+                            scale_factor = total_other / current_other_total
+                            for asset in other_assets:
+                                adjusted_allocation[asset] = adjusted_allocation[asset] * scale_factor
+                        else:
+                            # If no other assets have allocation, distribute equally
+                            equal_share = total_other / len(other_assets)
+                            for asset in other_assets:
+                                adjusted_allocation[asset] = equal_share
+                    elif total_other == 0:
+                        # Set other assets to 0
+                        for asset in other_assets:
+                            adjusted_allocation[asset] = 0.0
+                    else:
+                        # If negative, this is invalid
+                        st.error("❌ Invalid allocation: Total exceeds 100%")
+                        adjusted_allocation = result['allocation'].copy()  # Reset
+                    
+                    # Ensure total is exactly 100% (rounding fix)
+                    total_check = sum(adjusted_allocation.values())
+                    if abs(total_check - 100.0) > 0.01:
+                        # Adjust the selected asset to make total exactly 100%
+                        adjusted_allocation[selected_asset] += (100.0 - total_check)
+                    
+                    st.subheader("Adjusted Allocation")
+                    adj_df = pd.DataFrame.from_dict(adjusted_allocation, orient='index', columns=['Percentage'])
+                    fig = px.pie(adj_df, values='Percentage', names=adj_df.index, title="What-If Allocation")
+                    st.plotly_chart(fig, use_container_width=True)
+                    
+                    # Show summary
+                    st.write(f"**{selected_asset}**: {adjusted_allocation[selected_asset]:.1f}%")
+                    if other_assets:
+                        st.write(f"**Other assets**: {total_other:.1f}% total")
+                    
+                except Exception as e:
+                    st.error(f"❌ Error in recalculation: {str(e)}")
+                    st.info("💡 Try adjusting the weight to a valid percentage (0-100%)")
 
         with tab4:
             st.header("AI Insights & Recommendations")
