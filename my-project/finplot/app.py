@@ -1,0 +1,147 @@
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from models.assets import Asset
+from models.portfolio import Portfolio
+from portfolio.portfolio_analyzer import PortfolioAnalyzer
+
+st.set_page_config(page_title="FinPlot - Portfolio Intelligence", page_icon="📈", layout="wide")
+
+st.title("📈 FinPlot - Portfolio Intelligence")
+st.markdown("### *Your Smart Portfolio Companion* 💡")
+
+st.sidebar.header("🎯 Portfolio Setup")
+
+# Input for assets
+num_assets = st.sidebar.number_input("Number of Assets", min_value=1, value=5, help="How many investments do you have?")
+
+assets = []
+for i in range(num_assets):
+    with st.sidebar.expander(f"📊 Asset {i+1}"):
+        symbol = st.text_input(f"Symbol {i+1}", key=f"symbol_{i}", help="e.g., AAPL, BTC-USD, or CASH")
+        asset_type = st.selectbox(f"Type {i+1}", ["stock", "crypto", "bond", "cash"], key=f"type_{i}")
+        current_value = st.number_input(f"Current Value {i+1}", min_value=0.0, key=f"value_{i}", help="₹")
+        purchase_price = st.number_input(f"Purchase Price {i+1}", min_value=0.0, key=f"purchase_{i}", help="₹")
+
+        if symbol and current_value > 0:
+            assets.append(Asset(symbol, asset_type, purchase_price, current_value))
+
+if st.sidebar.button("🚀 Analyze Portfolio", type="primary"):
+    if assets:
+        portfolio = Portfolio(assets)
+        analyzer = PortfolioAnalyzer(portfolio)
+
+        with st.spinner("🔍 Crunching numbers... Analyzing your portfolio magic! ✨"):
+            result = analyzer.analyze()
+
+        # Create tabs
+        tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "📈 Analysis", "🎲 What-If", "💡 Insights"])
+
+        with tab1:
+            st.header("Portfolio Overview")
+            
+            # Key metrics in columns
+            col1, col2, col3, col4 = st.columns(4)
+            with col1:
+                st.metric("💰 Total Value", f"₹{result['portfolio_value']:,.0f}", delta=f"{result['return_rate']:+.1f}%")
+            with col2:
+                st.metric("📊 Volatility", f"{result['volatility']}%")
+            with col3:
+                st.metric("🎯 Risk Score", f"{result['risk_score']}/100", help=f"Level: {result['risk_level']}")
+            with col4:
+                st.metric("🌟 Diversification", f"{result['diversification_score']}/100")
+
+            # Risk gauge
+            st.subheader("Risk Meter")
+            fig = go.Figure(go.Indicator(
+                mode="gauge+number",
+                value=result['risk_score'],
+                title={'text': "Portfolio Risk"},
+                gauge={'axis': {'range': [0, 100]},
+                       'bar': {'color': "darkblue"},
+                       'steps': [
+                           {'range': [0, 20], 'color': "lightgreen"},
+                           {'range': [20, 40], 'color': "yellow"},
+                           {'range': [40, 60], 'color': "orange"},
+                           {'range': [60, 100], 'color': "red"}]}))
+            st.plotly_chart(fig, use_container_width=True)
+
+        with tab2:
+            st.header("Detailed Analysis")
+            
+            col1, col2 = st.columns(2)
+            
+            with col1:
+                st.subheader("Asset Allocation")
+                allocation_df = pd.DataFrame.from_dict(result['allocation'], orient='index', columns=['Percentage'])
+                fig = px.pie(allocation_df, values='Percentage', names=allocation_df.index, 
+                           title="Portfolio Allocation", hole=0.4)
+                fig.update_traces(textposition='inside', textinfo='percent+label')
+                st.plotly_chart(fig, use_container_width=True)
+
+            with col2:
+                st.subheader("Sector Exposure")
+                sector_df = pd.DataFrame.from_dict(result['sector_exposure'], orient='index', columns=['Percentage'])
+                fig = px.bar(sector_df, x=sector_df.index, y='Percentage', 
+                           title="Sector Breakdown", color='Percentage')
+                st.plotly_chart(fig, use_container_width=True)
+
+            st.subheader("Optimal Allocation")
+            optimal_df = pd.DataFrame.from_dict(result['optimal_allocation'], orient='index', columns=['Weight'])
+            optimal_df = optimal_df[optimal_df['Weight'] > 0.01]  # Filter small weights
+            optimal_df['Weight'] = optimal_df['Weight'] * 100  # Convert to percentage
+            fig = px.bar(optimal_df, x=optimal_df.index, y='Weight', 
+                       title="Suggested Optimal Weights", color='Weight')
+            st.plotly_chart(fig, use_container_width=True)
+
+        with tab3:
+            st.header("What-If Scenarios 🎲")
+            st.markdown("Adjust allocations and see how it affects your portfolio!")
+
+            # Simple what-if: adjust one asset's weight
+            st.subheader("Adjust Asset Weight")
+            asset_options = list(result['allocation'].keys())
+            selected_asset = st.selectbox("Select Asset to Adjust", asset_options)
+            current_weight = result['allocation'][selected_asset]
+            new_weight = st.slider(f"New weight for {selected_asset}", 0.0, 100.0, float(current_weight), 1.0)
+
+            if st.button("Recalculate"):
+                # Simple recalculation (not full re-analysis)
+                adjusted_allocation = result['allocation'].copy()
+                adjusted_allocation[selected_asset] = new_weight
+                # Normalize others (simplified)
+                total_other = 100 - new_weight
+                other_assets = [k for k in adjusted_allocation.keys() if k != selected_asset]
+                if other_assets:
+                    for asset in other_assets:
+                        adjusted_allocation[asset] = adjusted_allocation[asset] * (total_other / sum(adjusted_allocation[a] for a in other_assets))
+                
+                st.subheader("Adjusted Allocation")
+                adj_df = pd.DataFrame.from_dict(adjusted_allocation, orient='index', columns=['Percentage'])
+                fig = px.pie(adj_df, values='Percentage', names=adj_df.index, title="What-If Allocation")
+                st.plotly_chart(fig, use_container_width=True)
+
+        with tab4:
+            st.header("AI Insights & Recommendations")
+            
+            st.subheader("💡 Key Insights")
+            for insight in result['insights']:
+                st.info(f"• {insight}")
+
+            st.subheader("🎯 Recommendations")
+            for rec in result['recommendations']:
+                st.success(f"• {rec}")
+
+            # Market context
+            st.subheader("🌍 Market Context")
+            market = result['market_context']
+            st.write(f"**Market Regime:** {market.get('market_regime', 'Unknown')}")
+            st.write(f"**VIX Level:** {market.get('vix', 'N/A')}")
+
+    else:
+        st.error("❌ Please enter at least one asset with a symbol and current value!")
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("Made with ❤️ by FinPlot Team")
+st.sidebar.markdown("[📖 Documentation](https://github.com/your-repo) | [🐛 Report Issues](https://github.com/your-repo/issues)")
