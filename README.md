@@ -1,5 +1,5 @@
 # FinPlot - Portfolio Intelligence
-
+"""THIS IS AN UNDERGOING PROJECT"""
 *Your Smart Portfolio Companion* 
 
 A comprehensive portfolio analysis tool that provides intelligent insights, risk assessment, and optimization recommendations for investors. Built with Python and featuring an interactive Streamlit web interface.
