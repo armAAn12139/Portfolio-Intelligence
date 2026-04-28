@@ -1,0 +1,21 @@
+# OS junk
+$RECYCLE.BIN/
+System Volume Information/
+*.log
+*.tmp
+pagefile.sys
+
+# Python
+__pycache__/
+*.pyc
+
+# Virtual env
+venv/
+.env/
+
+# Data (if large)
+data/
+
+# Misc
+*.lnk
+
