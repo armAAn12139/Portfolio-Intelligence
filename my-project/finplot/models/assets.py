@@ -6,3 +6,4 @@ class Asset:
     asset_type: str
     amount_invested: float
     current_value: float
+    currency: str = "INR"  # Default to INR

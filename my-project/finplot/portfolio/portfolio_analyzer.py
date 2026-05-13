@@ -51,7 +51,7 @@ class PortfolioAnalyzer:
         # Step 4: Compute weights (only for available assets)
         # -----------------------------
         total_value = self.portfolio.total_value()
-        total_invested = sum(asset.amount_invested for asset in self.portfolio.assets)
+        total_invested = self.portfolio.total_invested()
         return_rate = ((total_value - total_invested) / total_invested) if total_invested else 0
 
         # Filter assets to only those with available data

@@ -18,16 +18,17 @@ SECTOR_MAP = {
 
 
 def calculate_sector_exposure(portfolio):
+    from utils.currency_converter import converter
 
     total_value = portfolio.total_value()
 
     sector_weights = {}
 
     for asset in portfolio.assets:
-
+        value_in_inr = converter.convert_to_inr(asset.current_value, asset.currency)
         sector = SECTOR_MAP.get(asset.symbol, "Other")
 
-        weight = asset.current_value / total_value * 100
+        weight = value_in_inr / total_value * 100
 
         sector_weights[sector] = sector_weights.get(sector, 0) + weight
 

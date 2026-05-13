@@ -5,6 +5,7 @@ import plotly.graph_objects as go
 from models.assets import Asset
 from models.portfolio import Portfolio
 from portfolio.portfolio_analyzer import PortfolioAnalyzer
+from utils.currency_converter import converter
 
 st.set_page_config(page_title="FinPlot - Portfolio Intelligence", page_icon="📈", layout="wide")
 
@@ -12,6 +13,13 @@ st.title("📈 FinPlot - Portfolio Intelligence")
 st.markdown("### *Your Smart Portfolio Companion* 💡")
 
 st.sidebar.header("🎯 Portfolio Setup")
+
+# Currency selection info
+st.sidebar.markdown("---")
+st.sidebar.subheader("💱 Currency Support")
+st.sidebar.markdown("All values will be converted to INR for analysis")
+supported_currencies = converter.get_supported_currencies()
+st.sidebar.markdown(f"Supported currencies: {', '.join(supported_currencies[:5])}...")
 
 # Input for assets
 num_assets = st.sidebar.number_input("Number of Assets", min_value=1, value=5, help="How many investments do you have?")
@@ -21,11 +29,12 @@ for i in range(num_assets):
     with st.sidebar.expander(f"📊 Asset {i+1}"):
         symbol = st.text_input(f"Symbol {i+1}", key=f"symbol_{i}", help="e.g., AAPL, BTC-USD, or CASH")
         asset_type = st.selectbox(f"Type {i+1}", ["stock", "crypto", "bond", "cash"], key=f"type_{i}")
-        current_value = st.number_input(f"Current Value {i+1}", min_value=0.0, key=f"value_{i}", help="₹")
-        purchase_price = st.number_input(f"Purchase Price {i+1}", min_value=0.0, key=f"purchase_{i}", help="₹")
+        currency = st.selectbox(f"Currency {i+1}", supported_currencies, index=supported_currencies.index("INR") if "INR" in supported_currencies else 0, key=f"currency_{i}")
+        current_value = st.number_input(f"Current Value {i+1}", min_value=0.0, key=f"value_{i}", help=f"Value in {currency}")
+        purchase_price = st.number_input(f"Purchase Price {i+1}", min_value=0.0, key=f"purchase_{i}", help=f"Purchase price in {currency}")
 
         if symbol and current_value > 0:
-            assets.append(Asset(symbol, asset_type, purchase_price, current_value))
+            assets.append(Asset(symbol, asset_type, purchase_price, current_value, currency))
 
 if st.sidebar.button("🚀 Analyze Portfolio", type="primary"):
     if assets:

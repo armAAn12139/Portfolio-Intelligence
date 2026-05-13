@@ -6,11 +6,11 @@ from utils.helpers import print_portfolio_report
 
 portfolio = Portfolio(
     assets=[
-        Asset("BTC-USD","crypto",100000,120000),
-        Asset("ETH-USD","crypto",90000,110000),
-        Asset("TSLA","stock",80000,100000),
-        Asset("NVDA","stock",70000,90000),
-        Asset("CASH","cash",5000,5000)
+        Asset("BTC-USD","crypto",100000,120000, "INR"),  # Values in INR
+        Asset("ETH-USD","crypto",90000,110000, "INR"),   # Values in INR
+        Asset("TSLA","stock",80000,100000, "INR"),       # Values in INR
+        Asset("NVDA","stock",70000,90000, "INR"),        # Values in INR
+        Asset("CASH","cash",5000,5000, "INR")            # Values in INR
     ]
 )
 

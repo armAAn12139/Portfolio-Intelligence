@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from utils.currency_converter import converter
 
 
 def calculate_allocation(portfolio):
@@ -11,8 +12,9 @@ def calculate_allocation(portfolio):
     allocation = {}
 
     for asset in portfolio.assets:
+        value_in_inr = converter.convert_to_inr(asset.current_value, asset.currency)
         allocation[asset.symbol] = round(
-            (asset.current_value / total_value) * 100, 2
+            (value_in_inr / total_value) * 100, 2
         )
 
     return allocation

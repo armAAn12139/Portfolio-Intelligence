@@ -1,37 +1,42 @@
-FROM python:3.10-slim
-
-# Env optimizations
-ENV PYTHONDONTWRITEBYTECODE=1
-ENV PYTHONUNBUFFERED=1
+# -------- STAGE 1: Build --------
+FROM python:3.10-slim as builder
 
 WORKDIR /app
 
-# System dependencies (critical for numpy/scipy)
+# Install build dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     gcc \
     gfortran \
-    libatlas-base-dev \
+    libopenblas-dev \
+    liblapack-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Upgrade pip (important for wheel installs)
+# Upgrade pip
 RUN pip install --upgrade pip
 
-# Copy requirements first (layer caching)
+# Copy requirements
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install dependencies into a custom directory
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
 
-# Copy project
+
+# -------- STAGE 2: Runtime --------
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Copy only installed packages
+COPY --from=builder /install /usr/local
+
+# Copy app code
 COPY . .
 
-# Streamlit config (prevents random behavior in container)
+# Streamlit config
 RUN mkdir -p /root/.streamlit && \
     echo "[server]\nheadless = true\nenableCORS = false\nport = 8501\naddress = \"0.0.0.0\"" > /root/.streamlit/config.toml
 
-# Expose port
 EXPOSE 8501
 
-# Run app
 CMD ["streamlit", "run", "app.py"]
