@@ -1,6 +1,7 @@
 import yfinance as yf
 import pandas as pd
 from typing import List, Dict, Optional
+from utils.currency_converter import converter
 from utils.symbols import ALL_SYMBOLS, INDIAN_STOCKS, SPECIAL_SYMBOLS, format_symbol_option
 
 SYMBOL_OVERRIDES = {
@@ -71,8 +72,15 @@ def fetch_current_price(symbol: str) -> Dict[str, Optional[float]]:
                     prev_close = float(history["Close"].iloc[-2])
 
         if price is not None:
-            result["price"] = round(float(price), 2)
-            result["currency"] = currency or "INR" if symbol in INDIAN_STOCKS else currency
+            if symbol == "GOLD" or symbol == "SILVER":
+                # Convert futures price from USD/oz to INR per 10g
+                price_in_inr = converter.convert_to_inr(float(price), "USD")
+                price_per_10g = price_in_inr / 31.1034768 * 10
+                result["price"] = round(price_per_10g, 2)
+                result["currency"] = "INR/10g"
+            else:
+                result["price"] = round(float(price), 2)
+                result["currency"] = currency or ("INR" if symbol in INDIAN_STOCKS else currency)
             if prev_close is not None and prev_close != 0:
                 result["change_pct"] = round((float(price) - float(prev_close)) / float(prev_close) * 100, 2)
 

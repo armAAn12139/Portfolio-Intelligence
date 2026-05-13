@@ -42,14 +42,15 @@ with st.sidebar.expander("🔎 Live Lookup", expanded=True):
         live_info = fetch_current_price(selected_live_symbol)
         price_text = f"{live_info['price']:,}" if live_info['price'] is not None else "N/A"
         change_text = f"{live_info['change_pct']:+.2f}%" if live_info['change_pct'] is not None else "N/A"
-        st.metric(f"{selected_live_symbol} live price", price_text, delta=change_text)
+        unit_label = f" ({live_info['currency']})" if live_info.get('currency') else ""
+        st.metric(f"{selected_live_symbol} live price{unit_label}", price_text, delta=change_text)
 
     st.markdown("---")
     st.write("**Gold price**")
     gold_info = fetch_current_price("GOLD")
     gold_price = f"{gold_info['price']:,}" if gold_info['price'] is not None else "N/A"
     gold_change = f"{gold_info['change_pct']:+.2f}%" if gold_info['change_pct'] is not None else "N/A"
-    st.metric("GOLD", gold_price, delta=gold_change)
+    st.metric(f"GOLD ({gold_info.get('currency', '')})", gold_price, delta=gold_change)
 
     st.markdown("---")
     if st.button("Refresh exchange rates"):
