@@ -6,6 +6,7 @@ from models.assets import Asset
 from models.portfolio import Portfolio
 from portfolio.portfolio_analyzer import PortfolioAnalyzer
 from utils.currency_converter import converter
+from data.symbols import ALL_SYMBOLS, get_symbols_by_category, format_symbol_option
 
 st.set_page_config(page_title="FinPlot - Portfolio Intelligence", page_icon="📈", layout="wide")
 
@@ -21,13 +22,51 @@ st.sidebar.markdown("All values will be converted to INR for analysis")
 supported_currencies = converter.get_supported_currencies()
 st.sidebar.markdown(f"Supported currencies: {', '.join(supported_currencies[:5])}...")
 
+# Symbol reference section
+st.sidebar.markdown("---")
+with st.sidebar.expander("📋 Available Symbols Reference"):
+    symbols_by_category = get_symbols_by_category()
+    for category, symbols in symbols_by_category.items():
+        st.markdown(f"**{category}**")
+        # Show first 10 symbols per category
+        displayed_symbols = sorted(symbols.keys())[:10]
+        symbols_text = ", ".join(displayed_symbols)
+        if len(symbols) > 10:
+            st.caption(f"{symbols_text}... (+{len(symbols)-10} more)")
+        else:
+            st.caption(symbols_text)
+        st.markdown("")
+
 # Input for assets
 num_assets = st.sidebar.number_input("Number of Assets", min_value=1, value=5, help="How many investments do you have?")
 
 assets = []
 for i in range(num_assets):
     with st.sidebar.expander(f"📊 Asset {i+1}"):
-        symbol = st.text_input(f"Symbol {i+1}", key=f"symbol_{i}", help="e.g., AAPL, BTC-USD, or CASH")
+        # Symbol selection with search
+        st.markdown(f"**Select Symbol {i+1}**")
+        col1, col2 = st.columns([3, 1])
+        
+        with col1:
+            # Create symbol options
+            symbol_options = sorted(ALL_SYMBOLS.keys())
+            symbol_display_options = [f"{s} - {ALL_SYMBOLS[s]}" for s in symbol_options]
+            
+            selected_option = st.selectbox(
+                f"Search for symbol {i+1}",
+                symbol_display_options,
+                key=f"symbol_{i}",
+                help="Search and select from major Indian stocks, cryptocurrencies, and indices"
+            )
+            # Extract just the symbol from the selected option
+            symbol = selected_option.split(" - ")[0] if selected_option else ""
+        
+        with col2:
+            st.markdown("**Or Enter Custom**")
+            custom_symbol = st.text_input(f"Custom {i+1}", key=f"custom_symbol_{i}", placeholder="e.g., AAPL", label_visibility="collapsed")
+            if custom_symbol:
+                symbol = custom_symbol
+        
         asset_type = st.selectbox(f"Type {i+1}", ["stock", "crypto", "bond", "cash"], key=f"type_{i}")
         currency = st.selectbox(f"Currency {i+1}", supported_currencies, index=supported_currencies.index("INR") if "INR" in supported_currencies else 0, key=f"currency_{i}")
         current_value = st.number_input(f"Current Value {i+1}", min_value=0.0, key=f"value_{i}", help=f"Value in {currency}")
