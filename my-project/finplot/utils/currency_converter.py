@@ -68,5 +68,17 @@ class CurrencyConverter:
         """
         return list(self.rates.keys())
 
+    def refresh_rates(self):
+        """
+        Refresh the exchange rates from the API.
+        """
+        self._load_rates()
+
+    def get_rates(self) -> Dict[str, float]:
+        """
+        Return the current exchange rates.
+        """
+        return dict(sorted(self.rates.items()))
+
 # Global instance
 converter = CurrencyConverter()

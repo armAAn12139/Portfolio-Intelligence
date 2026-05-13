@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -6,6 +7,7 @@ from models.assets import Asset
 from models.portfolio import Portfolio
 from portfolio.portfolio_analyzer import PortfolioAnalyzer
 from utils.currency_converter import converter
+from utils.live_market import fetch_live_prices, fetch_current_price, get_default_watchlist
 from utils.symbols import ALL_SYMBOLS, get_symbols_by_category, format_symbol_option
 
 st.set_page_config(page_title="FinPlot - Portfolio Intelligence", page_icon="📈", layout="wide")
@@ -21,6 +23,48 @@ st.sidebar.subheader("💱 Currency Support")
 st.sidebar.markdown("All values will be converted to INR for analysis")
 supported_currencies = converter.get_supported_currencies()
 st.sidebar.markdown(f"Supported currencies: {', '.join(supported_currencies[:5])}...")
+
+# Live market snapshot settings
+st.sidebar.markdown("---")
+st.sidebar.subheader("📈 Live Market Feed")
+auto_refresh = st.sidebar.checkbox("Auto-refresh live prices", value=True)
+refresh_interval = st.sidebar.slider("Refresh interval (seconds)", min_value=15, max_value=180, value=60, step=15)
+if auto_refresh:
+    components.html(f"<script>setTimeout(()=>window.location.reload(), {refresh_interval * 1000});</script>", height=0)
+
+symbol_options = sorted(ALL_SYMBOLS.keys())
+symbol_display_options = [format_symbol_option(s) for s in symbol_options]
+
+with st.sidebar.expander("🔎 Live Lookup", expanded=True):
+    selected_live = st.selectbox("Search symbol for live price", symbol_display_options, key="live_lookup", help="Search and display live market price for any major stock or crypto")
+    selected_live_symbol = selected_live.split(" - ")[0] if selected_live else ""
+    if selected_live_symbol:
+        live_info = fetch_current_price(selected_live_symbol)
+        price_text = f"{live_info['price']:,}" if live_info['price'] is not None else "N/A"
+        change_text = f"{live_info['change_pct']:+.2f}%" if live_info['change_pct'] is not None else "N/A"
+        st.metric(f"{selected_live_symbol} live price", price_text, delta=change_text)
+
+    st.markdown("---")
+    st.write("**Gold price**")
+    gold_info = fetch_current_price("GOLD")
+    gold_price = f"{gold_info['price']:,}" if gold_info['price'] is not None else "N/A"
+    gold_change = f"{gold_info['change_pct']:+.2f}%" if gold_info['change_pct'] is not None else "N/A"
+    st.metric("GOLD", gold_price, delta=gold_change)
+
+    st.markdown("---")
+    if st.button("Refresh exchange rates"):
+        converter.refresh_rates()
+    rates = converter.get_rates()
+    rate_rows = [f"{cur}: {rate:.4f}" for cur, rate in list(rates.items())[:10]]
+    st.write("**Currency Rates (INR base)**")
+    for row in rate_rows:
+        st.caption(row)
+
+    st.markdown("---")
+    st.write("**Quick Watchlist**")
+    watchlist_symbols = get_default_watchlist()
+    watchlist_df = fetch_live_prices(watchlist_symbols)
+    st.dataframe(watchlist_df, use_container_width=True, hide_index=True)
 
 # Symbol reference section
 st.sidebar.markdown("---")
