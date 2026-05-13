@@ -6,7 +6,7 @@ from models.assets import Asset
 from models.portfolio import Portfolio
 from portfolio.portfolio_analyzer import PortfolioAnalyzer
 from utils.currency_converter import converter
-from data.symbols import ALL_SYMBOLS, get_symbols_by_category, format_symbol_option
+from utils.symbols import ALL_SYMBOLS, get_symbols_by_category, format_symbol_option
 
 st.set_page_config(page_title="FinPlot - Portfolio Intelligence", page_icon="📈", layout="wide")
 
