@@ -15,7 +15,7 @@ A comprehensive portfolio analysis tool that provides intelligent insights, risk
 - **Performance Tracking** - Monitor returns vs. investments
 - **Sector Exposure** - Understand market concentration
 
-### 🤖 AI Insights
+### AI Insights
 - **Market Regime Detection** - Bull/Bear market identification
 - **Smart Recommendations** - Personalized investment advice
 - **Risk Warnings** - Alerts for high-risk positions
