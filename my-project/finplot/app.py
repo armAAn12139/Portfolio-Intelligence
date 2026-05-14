@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -11,6 +10,10 @@ from utils.live_market import fetch_live_prices, fetch_current_price, get_defaul
 from utils.symbols import ALL_SYMBOLS, get_symbols_by_category, format_symbol_option
 
 st.set_page_config(page_title="FinPlot - Portfolio Intelligence", page_icon="📈", layout="wide")
+
+# Initialize session state for form persistence
+if "asset_form_initialized" not in st.session_state:
+    st.session_state.asset_form_initialized = True
 
 st.title("📈 FinPlot - Portfolio Intelligence")
 st.markdown("### *Your Smart Portfolio Companion* 💡")
@@ -29,8 +32,8 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("📈 Live Market Feed")
 auto_refresh = st.sidebar.checkbox("Auto-refresh live prices", value=True)
 refresh_interval = st.sidebar.slider("Refresh interval (seconds)", min_value=15, max_value=180, value=60, step=15)
-if auto_refresh:
-    components.html(f"<script>setTimeout(()=>window.location.reload(), {refresh_interval * 1000});</script>", height=0)
+# Note: Auto-refresh only affects live market data display, not form inputs
+# Form values are now persisted in session state
 
 symbol_options = sorted(ALL_SYMBOLS.keys())
 symbol_display_options = [format_symbol_option(s) for s in symbol_options]
