@@ -94,24 +94,29 @@ class RiskScorer:
     def rule_based_score(self, portfolio, market_data):
         score = 0
 
-        # Portfolio risk
-        score += portfolio.get("volatility", 0) * 0.3
-        score += portfolio.get("max_drawdown", 0) * 0.2
-        score -= portfolio.get("sharpe_ratio", 0) * 5
+        # Portfolio risk - INCREASED MULTIPLIERS
+        score += portfolio.get("volatility", 0) * 1.5  # Increased from 0.3
+        score += portfolio.get("max_drawdown", 0) * 1.0  # Increased from 0.2
+        score -= portfolio.get("sharpe_ratio", 0) * 2   # Reduced penalty (was too aggressive)
 
-        # Concentration risk
+        # Concentration risk - INCREASED PENALTIES
         if portfolio.get("tech_exposure", 0) > 40:
-            score += 10
+            score += 20  # Increased from 10
+        
+        if portfolio.get("tech_exposure", 0) > 60:
+            score += 30  # Added penalty for extreme concentration
 
         if portfolio.get("diversification_score", 0) < 50:
-            score += 15
+            score += 25  # Increased from 15
+        elif portfolio.get("diversification_score", 0) < 30:
+            score += 40  # Added penalty for very poor diversification
 
-        # Market risk
-        score += market_data.get("vix", 15) * 0.5
-        score += market_data.get("inflation", 5) * 1.2
+        # Market risk - INCREASED WEIGHTS
+        score += market_data.get("vix", 15) * 1.2    # Increased from 0.5
+        score += market_data.get("inflation", 5) * 2.0  # Increased from 1.2
 
         if market_data.get("market_trend", 0) == -1:
-            score += 10
+            score += 20  # Increased from 10
 
         return score
 
@@ -131,6 +136,11 @@ class RiskScorer:
     # -----------------------------
     def estimate_drawdown(self, risk_score):
         """
-        Simple probabilistic mapping
+        Probabilistic mapping with better scaling:
+        - 0 risk_score → ~5% probability
+        - 50 risk_score → ~25% probability  
+        - 100 risk_score → ~90% probability
         """
-        return round(min(0.05 + (risk_score / 200), 0.8), 2)
+        # Using a quadratic function for better sensitivity to high-risk portfolios
+        probability = 0.05 + (risk_score / 120)  # Changed from /200 to /120 for steeper curve
+        return round(min(probability, 0.95), 2)  # Allow up to 95% instead of 80%

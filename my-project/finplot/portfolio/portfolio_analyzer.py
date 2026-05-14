@@ -159,32 +159,59 @@ class PortfolioAnalyzer:
     def compute_risk_score(self, volatility, allocation, diversification, market_context, return_rate):
         """
         Compute a composite risk score based on multiple factors
+        Weighted components:
+        - Volatility: 40%
+        - Concentration: 25%
+        - Market regime: 20%
+        - Return performance: 15%
         """
-        # Base score from volatility (0-100 scale)
-        vol_score = min(100, volatility * 100 * 5)  # Scale volatility to 0-100
+        # Base score from volatility (stronger weighting)
+        # volatility is in decimal form (0.20 = 20%)
+        vol_score = min(100, volatility * 100 * 5.5)  # Slightly increased multiplier
+        
+        # Concentration risk from allocation
+        concentration_risk = 0
+        single_asset_max = max(allocation.values()) if allocation else 0
+        concentration_risk = single_asset_max * 1.2  # Penalize concentration
+        
+        if single_asset_max > 30:  # More than 30% in single asset
+            concentration_risk += 20
+        if single_asset_max > 50:  # More than 50% in single asset
+            concentration_risk += 30
 
-        # Market regime adjustment
+        # Market regime adjustment (with stronger impact)
         regime = market_context.get("market_regime", "neutral")
         regime_multiplier = {
-            "bull": 0.8,
+            "bull": 0.9,      # Slightly reduced
             "neutral": 1.0,
-            "bear": 1.3,
-            "volatile": 1.5
+            "bear": 1.4,      # Increased
+            "volatile": 1.8   # Significantly increased
         }.get(regime, 1.0)
 
-        # Diversification bonus
-        div_bonus = diversification * 0.5
+        # Diversification penalty (increased impact for poor diversification)
+        diversification_score_val = (100 - diversification) * 0.6  # Higher penalty for low diversity
+        
+        # Crypto exposure penalty (remains aggressive)
+        crypto_penalty = allocation.get("crypto", 0) * 2.5
 
-        # Crypto exposure penalty
-        crypto_penalty = allocation.get("crypto", 0) * 2
-
-        # Performance adjustment: penalize losses, reward gains
-        if return_rate < 0:
-            performance_adjustment = abs(return_rate) * 25
+        # Performance adjustment (penalize significant losses more heavily)
+        if return_rate < -0.20:  # -20% or worse
+            performance_adjustment = abs(return_rate) * 40
+        elif return_rate < 0:
+            performance_adjustment = abs(return_rate) * 30
         else:
-            performance_adjustment = -min(return_rate, 0.2) * 10
+            performance_adjustment = -min(return_rate * 0.05, 5)  # Minimal reward for gains
 
-        risk_score = (vol_score * regime_multiplier) - div_bonus + crypto_penalty + performance_adjustment
+        # Composite score with better weighting
+        risk_score = (
+            (vol_score * 0.40) +
+            (concentration_risk * 0.25) +
+            (vol_score * regime_multiplier * 0.20) +
+            (diversification_score_val * 0.15) +
+            crypto_penalty +
+            performance_adjustment
+        )
+        
         return max(0, min(100, risk_score))
 
     def get_risk_level(self, risk_score):
