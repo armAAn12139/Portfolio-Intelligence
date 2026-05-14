@@ -35,10 +35,17 @@ class PortfolioAnalyzer:
 
         # Filter to available symbols
         available_symbols = price_data_full.columns.tolist()
+        unavailable_symbols = [s for s in portfolio_symbols if s not in available_symbols]
         portfolio_symbols = [s for s in portfolio_symbols if s in available_symbols]
 
         if not portfolio_symbols:
-            raise ValueError("No market data available for portfolio assets")
+            error_msg = f"No market data available for portfolio assets. Missing: {', '.join(unavailable_symbols) if unavailable_symbols else 'All symbols'}"
+            raise ValueError(error_msg)
+        
+        # Warn about unavailable symbols
+        if unavailable_symbols:
+            print(f"⚠️  Warning: Could not fetch data for symbols: {', '.join(unavailable_symbols)}")
+            print(f"   These assets may be delisted or have no data. Analyzing {len(portfolio_symbols)} available asset(s).")
 
         returns_full = calculate_returns(price_data_full)
 

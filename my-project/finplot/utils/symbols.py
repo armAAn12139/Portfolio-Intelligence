@@ -60,7 +60,7 @@ INDIAN_STOCKS = {
     "COLPAL": "Colgate-Palmolive",
     
     # Telecom
-    "AIRTELGROUP": "Airtel Group",
+    "BHARTIARTL": "Bharti Airtel",
     "JIO": "Jio (Reliance Jio)",
     "VODAFONE": "Vodafone Idea",
     "BSNL": "BSNL",

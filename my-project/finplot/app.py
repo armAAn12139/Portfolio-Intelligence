@@ -68,7 +68,7 @@ with st.sidebar.expander("🔎 Live Lookup", expanded=True):
     st.write("**Quick Watchlist**")
     watchlist_symbols = get_default_watchlist()
     watchlist_df = fetch_live_prices(watchlist_symbols)
-    st.dataframe(watchlist_df, use_container_width=True, hide_index=True)
+    st.dataframe(watchlist_df, width='stretch', hide_index=True)
 
 # Symbol reference section
 st.sidebar.markdown("---")
@@ -161,7 +161,7 @@ if st.sidebar.button("🚀 Analyze Portfolio", type="primary"):
                            {'range': [20, 40], 'color': "yellow"},
                            {'range': [40, 60], 'color': "orange"},
                            {'range': [60, 100], 'color': "red"}]}))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
         with tab2:
             st.header("Detailed Analysis")
@@ -174,14 +174,14 @@ if st.sidebar.button("🚀 Analyze Portfolio", type="primary"):
                 fig = px.pie(allocation_df, values='Percentage', names=allocation_df.index, 
                            title="Portfolio Allocation", hole=0.4)
                 fig.update_traces(textposition='inside', textinfo='percent+label')
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
             with col2:
                 st.subheader("Sector Exposure")
                 sector_df = pd.DataFrame.from_dict(result['sector_exposure'], orient='index', columns=['Percentage'])
                 fig = px.bar(sector_df, x=sector_df.index, y='Percentage', 
                            title="Sector Breakdown", color='Percentage')
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
 
             st.subheader("Optimal Allocation")
             optimal_df = pd.DataFrame.from_dict(result['optimal_allocation'], orient='index', columns=['Weight'])
@@ -189,7 +189,7 @@ if st.sidebar.button("🚀 Analyze Portfolio", type="primary"):
             optimal_df['Weight'] = optimal_df['Weight'] * 100  # Convert to percentage
             fig = px.bar(optimal_df, x=optimal_df.index, y='Weight', 
                        title="Suggested Optimal Weights", color='Weight')
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
         with tab3:
             st.header("What-If Scenarios 🎲")
@@ -246,7 +246,7 @@ if st.sidebar.button("🚀 Analyze Portfolio", type="primary"):
                     st.subheader("Adjusted Allocation")
                     adj_df = pd.DataFrame.from_dict(adjusted_allocation, orient='index', columns=['Percentage'])
                     fig = px.pie(adj_df, values='Percentage', names=adj_df.index, title="What-If Allocation")
-                    st.plotly_chart(fig, use_container_width=True)
+                    st.plotly_chart(fig, width='stretch')
                     
                     # Show summary
                     st.write(f"**{selected_asset}**: {adjusted_allocation[selected_asset]:.1f}%")
