@@ -1,5 +1,6 @@
 import yfinance as yf
 import pandas as pd
+from utils.live_market import translate_to_yf_symbol
 
 
 def fetch_price_history(symbol: str, period: str = "1y"):
@@ -8,7 +9,9 @@ def fetch_price_history(symbol: str, period: str = "1y"):
     """
 
     try:
-        data = yf.download(symbol, period=period, progress=False)
+        # Convert symbol to Yahoo Finance format (e.g., BIOCON -> BIOCON.NS)
+        yf_symbol = translate_to_yf_symbol(symbol)
+        data = yf.download(yf_symbol, period=period, progress=False)
 
         if data.empty:
             print(f"Warning: No market data found for {symbol}")
