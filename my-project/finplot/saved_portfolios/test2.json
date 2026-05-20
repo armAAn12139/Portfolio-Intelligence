@@ -1,0 +1,20 @@
+{
+  "name": "test2",
+  "description": "",
+  "assets": [
+    {
+      "symbol": "AAVE-USD",
+      "asset_type": "stock",
+      "amount_invested": 3200.0,
+      "current_value": 3400.0,
+      "currency": "INR"
+    },
+    {
+      "symbol": "BTC-USD",
+      "asset_type": "crypto",
+      "amount_invested": 5900.0,
+      "current_value": 5400.0,
+      "currency": "INR"
+    }
+  ]
+}

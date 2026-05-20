@@ -7,7 +7,15 @@ from models.portfolio import Portfolio
 from portfolio.portfolio_analyzer import PortfolioAnalyzer
 from utils.currency_converter import converter
 from utils.live_market import fetch_live_prices, fetch_current_price, get_default_watchlist
+from utils.portfolio_storage import (
+    delete_portfolio,
+    export_portfolio_json,
+    load_portfolio,
+    list_saved_portfolios,
+    save_portfolio,
+)
 from utils.symbols import ALL_SYMBOLS, get_symbols_by_category, format_symbol_option
+from data.market_data import fetch_multiple_assets
 
 st.set_page_config(page_title="FinPlot - Portfolio Intelligence", page_icon="📈", layout="wide")
 
@@ -26,6 +34,49 @@ st.sidebar.subheader("💱 Currency Support")
 st.sidebar.markdown("All values will be converted to INR for analysis")
 supported_currencies = converter.get_supported_currencies()
 st.sidebar.markdown(f"Supported currencies: {', '.join(supported_currencies[:5])}...")
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("💾 Portfolio Library")
+saved_portfolios = list_saved_portfolios()
+selected_saved_portfolio = st.sidebar.selectbox(
+    "Load saved portfolio",
+    [""] + saved_portfolios,
+    key="saved_portfolio_select",
+)
+if st.sidebar.button("Load saved portfolio"):
+    if selected_saved_portfolio:
+        loaded_assets = load_portfolio(selected_saved_portfolio)
+        st.session_state.loaded_assets = [asset.to_dict() for asset in loaded_assets]
+        st.session_state.loaded_portfolio_name = selected_saved_portfolio
+        st.session_state.num_assets_input = len(loaded_assets)
+        
+        # Sync form input keys with session state for loaded assets
+        for i, asset_dict in enumerate(st.session_state.loaded_assets):
+            st.session_state[f"symbol_{i}"] = None  # Reset selectbox
+            st.session_state[f"custom_symbol_{i}"] = asset_dict.get("symbol", "")
+            st.session_state[f"type_{i}"] = asset_dict.get("asset_type", "stock")
+            st.session_state[f"currency_{i}"] = asset_dict.get("currency", "INR")
+            st.session_state[f"value_{i}"] = float(asset_dict.get("current_value", 0.0))
+            st.session_state[f"purchase_{i}"] = float(asset_dict.get("amount_invested", 0.0))
+    else:
+        st.sidebar.warning("Select a portfolio to load first.")
+
+if selected_saved_portfolio and st.sidebar.button("Delete selected portfolio"):
+    if delete_portfolio(selected_saved_portfolio):
+        st.sidebar.success(f"Deleted portfolio '{selected_saved_portfolio}'.")
+        if st.session_state.get("loaded_portfolio_name") == selected_saved_portfolio:
+            st.session_state.pop("loaded_assets", None)
+            st.session_state.pop("loaded_portfolio_name", None)
+            # Clear form state
+            for i in range(20):  # Clear up to 20 assets
+                st.session_state.pop(f"symbol_{i}", None)
+                st.session_state.pop(f"custom_symbol_{i}", None)
+                st.session_state.pop(f"type_{i}", None)
+                st.session_state.pop(f"currency_{i}", None)
+                st.session_state.pop(f"value_{i}", None)
+                st.session_state.pop(f"purchase_{i}", None)
+
+st.sidebar.markdown("---")
 
 # Live market snapshot settings
 st.sidebar.markdown("---")
@@ -86,10 +137,29 @@ with st.sidebar.expander("📋 Available Symbols Reference"):
         st.markdown("")
 
 # Input for assets
-num_assets = st.sidebar.number_input("Number of Assets", min_value=1, value=5, help="How many investments do you have?")
+loaded_assets = st.session_state.get("loaded_assets", [])
+
+# Initialize num_assets_input in session state if it doesn't exist
+if "num_assets_input" not in st.session_state:
+    st.session_state.num_assets_input = len(loaded_assets) if loaded_assets else 5
+
+num_assets = st.sidebar.number_input(
+    "Number of Assets",
+    min_value=1,
+    key="num_assets_input",
+    help="How many investments do you have?",
+)
 
 assets = []
 for i in range(num_assets):
+    # Get widget keys
+    symbol_key = f"symbol_{i}"
+    custom_key = f"custom_symbol_{i}"
+    type_key = f"type_{i}"
+    currency_key = f"currency_{i}"
+    value_key = f"value_{i}"
+    purchase_key = f"purchase_{i}"
+
     with st.sidebar.expander(f"📊 Asset {i+1}"):
         # Symbol selection with search
         st.markdown(f"**Select Symbol {i+1}**")
@@ -103,25 +173,94 @@ for i in range(num_assets):
             selected_option = st.selectbox(
                 f"Search for symbol {i+1}",
                 symbol_display_options,
-                key=f"symbol_{i}",
-                help="Search and select from major Indian stocks, cryptocurrencies, and indices"
+                key=symbol_key,
+                help="Search and select from major Indian stocks, cryptocurrencies, and indices",
             )
             # Extract just the symbol from the selected option
             symbol = selected_option.split(" - ")[0] if selected_option else ""
         
         with col2:
             st.markdown("**Or Enter Custom**")
-            custom_symbol = st.text_input(f"Custom {i+1}", key=f"custom_symbol_{i}", placeholder="e.g., AAPL", label_visibility="collapsed")
+            custom_symbol = st.text_input(
+                f"Custom {i+1}",
+                key=custom_key,
+                placeholder="e.g., AAPL",
+                label_visibility="collapsed",
+            )
             if custom_symbol:
-                symbol = custom_symbol
-        
-        asset_type = st.selectbox(f"Type {i+1}", ["stock", "crypto", "bond", "cash"], key=f"type_{i}")
-        currency = st.selectbox(f"Currency {i+1}", supported_currencies, index=supported_currencies.index("INR") if "INR" in supported_currencies else 0, key=f"currency_{i}")
-        current_value = st.number_input(f"Current Value {i+1}", min_value=0.0, key=f"value_{i}", help=f"Value in {currency}")
-        purchase_price = st.number_input(f"Purchase Price {i+1}", min_value=0.0, key=f"purchase_{i}", help=f"Purchase price in {currency}")
+                symbol = custom_symbol.strip().upper()
+
+        asset_type_options = ["stock", "crypto", "bond", "cash"]
+        asset_type = st.selectbox(
+            f"Type {i+1}",
+            asset_type_options,
+            key=type_key,
+        )
+        currency = st.selectbox(
+            f"Currency {i+1}",
+            supported_currencies,
+            key=currency_key,
+        )
+        current_value = st.number_input(
+            f"Current Value {i+1}",
+            min_value=0.0,
+            key=value_key,
+            help=f"Value in {currency}",
+        )
+        purchase_price = st.number_input(
+            f"Purchase Price {i+1}",
+            min_value=0.0,
+            key=purchase_key,
+            help=f"Purchase price in {currency}",
+        )
 
         if symbol and current_value > 0:
             assets.append(Asset(symbol, asset_type, purchase_price, current_value, currency))
+
+st.sidebar.markdown("---")
+st.sidebar.subheader("📝 Save & Export")
+portfolio_name = st.sidebar.text_input(
+    "Save portfolio as",
+    value=st.session_state.get("loaded_portfolio_name", ""),
+    key="save_portfolio_name",
+    placeholder="e.g. My Long-Term Allocation",
+)
+if st.sidebar.button("Save portfolio"):
+    if assets and portfolio_name.strip():
+        save_portfolio(portfolio_name.strip(), assets)
+        st.sidebar.success(f"Saved portfolio '{portfolio_name.strip()}'.")
+        st.session_state.loaded_portfolio_name = portfolio_name.strip()
+        st.session_state.loaded_assets = [asset.to_dict() for asset in assets]
+        # Also sync the form state keys so they persist
+        for i, asset in enumerate(assets):
+            st.session_state[f"custom_symbol_{i}"] = asset.symbol
+            st.session_state[f"type_{i}"] = asset.asset_type
+            st.session_state[f"currency_{i}"] = asset.currency
+            st.session_state[f"value_{i}"] = asset.current_value
+            st.session_state[f"purchase_{i}"] = asset.amount_invested
+    else:
+        st.sidebar.error("Enter a portfolio name and at least one valid asset.")
+
+if assets:
+    export_json = export_portfolio_json(assets, portfolio_name or "portfolio")
+    st.sidebar.download_button(
+        "Export portfolio JSON",
+        export_json,
+        file_name=f"{(portfolio_name or 'portfolio').replace(' ', '_')}.json",
+        mime="application/json",
+    )
+
+if st.sidebar.button("Clear loaded portfolio"):
+    st.session_state.pop("loaded_assets", None)
+    st.session_state.pop("loaded_portfolio_name", None)
+    # Clear form state
+    for i in range(20):  # Clear up to 20 assets
+        st.session_state.pop(f"symbol_{i}", None)
+        st.session_state.pop(f"custom_symbol_{i}", None)
+        st.session_state.pop(f"type_{i}", None)
+        st.session_state.pop(f"currency_{i}", None)
+        st.session_state.pop(f"value_{i}", None)
+        st.session_state.pop(f"purchase_{i}", None)
 
 if st.sidebar.button("🚀 Analyze Portfolio", type="primary"):
     if assets:
@@ -162,6 +301,21 @@ if st.sidebar.button("🚀 Analyze Portfolio", type="primary"):
                            {'range': [40, 60], 'color': "orange"},
                            {'range': [60, 100], 'color': "red"}]}))
             st.plotly_chart(fig, width='stretch')
+
+            st.subheader("Benchmark Comparison")
+            benchmark_symbols = ["SPY", "GLD", "TLT"]
+            try:
+                benchmark_data = fetch_multiple_assets(benchmark_symbols)
+                benchmark_return = ((benchmark_data.iloc[-1] / benchmark_data.iloc[0] - 1) * 100).round(2)
+                benchmark_df = pd.DataFrame.from_dict(
+                    benchmark_return.to_dict(), orient='index', columns=['1Y Return (%)']
+                )
+                st.table(benchmark_df)
+                st.markdown(
+                    "*Portfolio return is based on invested vs current value; benchmark values are 1-year price returns.*"
+                )
+            except Exception:
+                st.warning("Unable to fetch benchmark data right now.")
 
         with tab2:
             st.header("Detailed Analysis")
