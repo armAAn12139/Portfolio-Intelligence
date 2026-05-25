@@ -5,8 +5,18 @@ import plotly.graph_objects as go
 from models.assets import Asset
 from models.portfolio import Portfolio
 from portfolio.portfolio_analyzer import PortfolioAnalyzer
+from portfolio.visualizations import (
+    create_performance_timeline,
+    create_asset_performance_heatmap,
+    create_risk_return_scatter,
+    create_cumulative_returns_chart,
+    create_drawdown_chart,
+    create_correlation_heatmap,
+    create_portfolio_treemap
+)
 from utils.currency_converter import converter
 from utils.live_market import fetch_live_prices, fetch_current_price, get_default_watchlist
+from data.market_data import fetch_multiple_assets
 from utils.portfolio_storage import (
     delete_portfolio,
     export_portfolio_json,
@@ -270,8 +280,26 @@ if st.sidebar.button("🚀 Analyze Portfolio", type="primary"):
         with st.spinner("🔍 Crunching numbers... Analyzing your portfolio magic! ✨"):
             result = analyzer.analyze()
 
+        # Fetch historical price data for visualizations
+        try:
+            portfolio_symbols = [asset.symbol for asset in portfolio.assets if asset.symbol != "CASH"]
+            if portfolio_symbols:
+                price_data = fetch_multiple_assets(portfolio_symbols)
+            else:
+                price_data = None
+        except Exception as e:
+            st.warning(f"Could not fetch historical data: {e}")
+            price_data = None
+
         # Create tabs
-        tab1, tab2, tab3, tab4 = st.tabs(["📊 Overview", "📈 Analysis", "🎲 What-If", "💡 Insights"])
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+            "📊 Overview",
+            "📈 Analysis",
+            "🎲 What-If",
+            "💡 Insights",
+            "📊 Performance Charts",
+            "🎯 Risk & Correlation"
+        ])
 
         with tab1:
             st.header("Portfolio Overview")
@@ -427,6 +455,105 @@ if st.sidebar.button("🚀 Analyze Portfolio", type="primary"):
             market = result['market_context']
             st.write(f"**Market Regime:** {market.get('market_regime', 'Unknown')}")
             st.write(f"**VIX Level:** {market.get('vix', 'N/A')}")
+
+        with tab5:
+            st.header("📊 Performance Charts")
+            
+            if price_data is not None:
+                available_assets = [a for a in portfolio.assets if a.symbol in price_data.columns]
+                
+                if available_assets:
+                    # Calculate portfolio weights for visualizations
+                    total_value = portfolio.total_value()
+                    weights = [converter.convert_to_inr(a.current_value, a.currency) / total_value for a in available_assets]
+                    
+                    st.subheader("1️⃣ Portfolio Value Timeline")
+                    st.info("Shows how your portfolio value has changed over time based on asset price movements.")
+                    try:
+                        fig = create_performance_timeline(price_data, available_assets)
+                        st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e:
+                        st.warning(f"Could not render timeline: {e}")
+                    
+                    st.divider()
+                    
+                    st.subheader("2️⃣ Cumulative Returns by Asset")
+                    st.info("Tracks how each individual asset in your portfolio has performed since the initial period.")
+                    try:
+                        fig = create_cumulative_returns_chart(price_data, available_assets)
+                        st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e:
+                        st.warning(f"Could not render cumulative returns: {e}")
+                    
+                    st.divider()
+                    
+                    st.subheader("3️⃣ Asset Performance Heatmap")
+                    st.info("Visual comparison of returns and volatility across your assets.")
+                    try:
+                        fig = create_asset_performance_heatmap(price_data, available_assets)
+                        st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e:
+                        st.warning(f"Could not render heatmap: {e}")
+                    
+                    st.divider()
+                    
+                    st.subheader("4️⃣ Portfolio Drawdown")
+                    st.info("Shows the maximum loss from a peak to a trough (important for risk understanding).")
+                    try:
+                        fig = create_drawdown_chart(price_data, available_assets)
+                        st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e:
+                        st.warning(f"Could not render drawdown: {e}")
+                else:
+                    st.warning("No price data available for your assets. Try using different symbols.")
+            else:
+                st.warning("Historical price data not available. Please try again or use different assets.")
+
+        with tab6:
+            st.header("🎯 Risk & Correlation Analysis")
+            
+            if price_data is not None:
+                available_assets = [a for a in portfolio.assets if a.symbol in price_data.columns]
+                
+                if available_assets:
+                    # Calculate portfolio weights for visualizations
+                    total_value = portfolio.total_value()
+                    weights = [converter.convert_to_inr(a.current_value, a.currency) / total_value for a in available_assets]
+                    
+                    st.subheader("1️⃣ Risk vs Return Analysis")
+                    st.info("Each bubble represents an asset. Larger bubbles = larger allocation. Green = positive returns, Red = negative returns.")
+                    try:
+                        fig = create_risk_return_scatter(price_data, available_assets, weights)
+                        st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e:
+                        st.warning(f"Could not render risk-return scatter: {e}")
+                    
+                    st.divider()
+                    
+                    st.subheader("2️⃣ Asset Correlation Matrix")
+                    st.info("Shows how assets move together. Values closer to 1 (red) = move together. Closer to -1 (blue) = move opposite (better diversification).")
+                    try:
+                        returns_data = price_data.pct_change().dropna()
+                        # Filter to available assets only
+                        returns_data = returns_data[[a.symbol for a in available_assets]]
+                        fig = create_correlation_heatmap(returns_data)
+                        st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e:
+                        st.warning(f"Could not render correlation matrix: {e}")
+                    
+                    st.divider()
+                    
+                    st.subheader("3️⃣ Portfolio Composition Treemap")
+                    st.info("Hierarchical view of your portfolio allocation. Larger rectangles = larger positions.")
+                    try:
+                        fig = create_portfolio_treemap(result['allocation'])
+                        st.plotly_chart(fig, use_container_width=True)
+                    except Exception as e:
+                        st.warning(f"Could not render treemap: {e}")
+                else:
+                    st.warning("No price data available for your assets. Try using different symbols.")
+            else:
+                st.warning("Historical price data not available. Please try again or use different assets.")
 
     else:
         st.error("❌ Please enter at least one asset with a symbol and current value!")
